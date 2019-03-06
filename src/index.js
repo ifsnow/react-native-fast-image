@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { PureComponent } from 'react'
 import PropTypes from 'prop-types'
 import {
     View,
@@ -12,7 +12,7 @@ import {
 
 const FastImageViewNativeModule = NativeModules.FastImageView
 
-class FastImage extends Component {
+class FastImage extends PureComponent {
     setNativeProps(nativeProps) {
         this._root.setNativeProps(nativeProps)
     }
@@ -33,18 +33,22 @@ class FastImage extends Component {
             ...props
         } = this.props
 
-        const mergedStyle = Array.isArray(style) ? style.reduce((r, c) => Object.assign(r, c), {}) : style
-        const borderRadius = Math.round(PixelRatio.getPixelSizeForLayoutSize(mergedStyle.borderRadius || 0))
-        const resolvedSource = Image.resolveAssetSource(
-            source instanceof Object
-                ? Object.assign(source, borderRadius > 0 && { borderRadius })
-                : source
-        )
+        const styleBorderRadius = (Array.isArray(style) ? StyleSheet.flatten(style) : style).borderRadius || 0;
+        let resolvedSource = null;
+
+        if (source instanceof Object && styleBorderRadius > 0) {
+            const borderRadius = Math.round(PixelRatio.getPixelSizeForLayoutSize(styleBorderRadius));
+            resolvedSource = Object.assign({}, source, { borderRadius });
+        } else {
+            resolvedSource = source;
+        }
+
+        const containerStyle = [styles.imageContainer, style];
 
         if (fallback) {
             return (
                 <View
-                    style={[styles.imageContainer, style]}
+                    style={containerStyle}
                     ref={this.captureRef}
                 >
                     <FastImageView
@@ -63,7 +67,7 @@ class FastImage extends Component {
         }
 
         return (
-            <View style={[styles.imageContainer, style]} ref={this.captureRef}>
+            <View style={containerStyle} ref={this.captureRef}>
                 <FastImageView
                     {...props}
                     style={StyleSheet.absoluteFill}
