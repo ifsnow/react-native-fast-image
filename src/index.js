@@ -5,9 +5,13 @@ import {
     NativeModules,
     requireNativeComponent,
     StyleSheet,
+    PixelRatio,
+    Platform,
 } from 'react-native'
 
 const FastImageViewNativeModule = NativeModules.FastImageView
+
+const IS_ANDROID = Platform.OS === 'android';
 
 function FastImageBase({
     source,
@@ -23,11 +27,26 @@ function FastImageBase({
     forwardedRef,
     ...props
 }) {
-    const resolvedSource = Image.resolveAssetSource(source)
+    let resolvedSource = null;
+
+    if (IS_ANDROID && source instanceof Object) {
+        const styleBorderRadius = (Array.isArray(style) ? StyleSheet.flatten(style) : style).borderRadius || 0;
+
+        if (styleBorderRadius > 0) {
+            const borderRadius = Math.round(PixelRatio.getPixelSizeForLayoutSize(styleBorderRadius));
+            resolvedSource = Object.assign({}, source, { borderRadius });
+        }
+    }
+
+    if (resolvedSource === null) {
+        resolvedSource = source;
+    }
+
+    const containerStyle = [styles.imageContainer, style];
 
     if (fallback) {
         return (
-            <View style={[styles.imageContainer, style]} ref={forwardedRef}>
+            <View style={containerStyle} ref={forwardedRef}>
                 <Image
                     {...props}
                     tintColor={tintColor}
@@ -45,7 +64,7 @@ function FastImageBase({
     }
 
     return (
-        <View style={[styles.imageContainer, style]} ref={forwardedRef}>
+        <View style={containerStyle} ref={forwardedRef}>
             <FastImageView
                 {...props}
                 tintColor={tintColor}
