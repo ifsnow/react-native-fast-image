@@ -15,6 +15,8 @@ const IS_ANDROID = Platform.OS === 'android';
 
 const IOS_EXTENSION_REG = /\.[a-z]+$/;
 
+let isHeaderFixed = false;
+
 function FastImageBase({
     source,
     tintColor,
@@ -38,6 +40,12 @@ function FastImageBase({
             const borderRadius = Math.round(PixelRatio.getPixelSizeForLayoutSize(styleBorderRadius));
             resolvedSource = Object.assign({}, source, { borderRadius });
         }
+    } else if (!IS_ANDROID && !isHeaderFixed) {
+        resolvedSource = Object.assign({}, source, {
+            headers: { Accept: 'image/*,*/*;q=0.8' },
+        });
+
+         isHeaderFixed = true;
     }
 
     if (resolvedSource === null) {
