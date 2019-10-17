@@ -27,6 +27,8 @@ function FastImageBase({
     forwardedRef,
     ...props
 }) {
+    const containerStyle = [styles.imageContainer, style];
+
     let resolvedSource = null;
 
     if (IS_ANDROID && source instanceof Object) {
@@ -36,13 +38,18 @@ function FastImageBase({
             const borderRadius = Math.round(PixelRatio.getPixelSizeForLayoutSize(styleBorderRadius));
             resolvedSource = Object.assign({}, source, { borderRadius });
         }
+
+        // Android 5.0 Issue
+        if (Platform.Version === 21) {
+            containerStyle.push({
+                overflow: 'visible',
+            });
+        }
     }
 
     if (resolvedSource === null) {
         resolvedSource = source;
     }
-
-    const containerStyle = [styles.imageContainer, style];
 
     if (fallback) {
         return (
