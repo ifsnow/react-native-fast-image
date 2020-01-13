@@ -4,11 +4,14 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.graphics.PorterDuff;
+import android.graphics.drawable.AnimationDrawable;
 import android.os.Build;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.RequestManager;
 import com.bumptech.glide.load.model.GlideUrl;
+import com.bumptech.glide.request.transition.DrawableCrossFadeFactory;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
@@ -26,6 +29,7 @@ import java.util.WeakHashMap;
 
 import javax.annotation.Nullable;
 
+import static com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade;
 import static com.dylanvann.fastimage.FastImageRequestListener.REACT_ON_ERROR_EVENT;
 import static com.dylanvann.fastimage.FastImageRequestListener.REACT_ON_LOAD_END_EVENT;
 import static com.dylanvann.fastimage.FastImageRequestListener.REACT_ON_LOAD_EVENT;
@@ -96,7 +100,7 @@ class FastImageViewManager extends SimpleViewManager<FastImageViewWithUrl> imple
         eventEmitter.receiveEvent(viewId, REACT_ON_LOAD_START_EVENT, new WritableNativeMap());
 
         if (requestManager != null) {
-            requestManager
+            RequestBuilder requestBuilder = requestManager
                     // This will make this work for remote and local images. e.g.
                     //    - file:///
                     //    - content://
@@ -104,9 +108,31 @@ class FastImageViewManager extends SimpleViewManager<FastImageViewWithUrl> imple
                     //    - android.resource://
                     //    - data:image/png;base64
                     .load(imageSource.getSourceForLoad())
-                    .apply(FastImageViewConverter.getOptions(context, imageSource, source))
-                    .listener(new FastImageRequestListener(key))
-                    .into(view);
+                    .apply(FastImageViewConverter.getOptions(context, imageSource, source));
+
+            if (source.hasKey("placeholder") && source.getBoolean("placeholder")) {
+                AnimationDrawable placeholderAnimationDrawable = null;
+
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+                        placeholderAnimationDrawable = (AnimationDrawable) context.getDrawable(R.drawable.placeholder);
+                    else
+                        placeholderAnimationDrawable = (AnimationDrawable) context.getResources().getDrawable(R.drawable.placeholder);
+                } catch (Exception e) {
+                }
+
+                if (placeholderAnimationDrawable != null) {
+                    requestBuilder.placeholder(placeholderAnimationDrawable);
+                    requestBuilder.listener(new FastImagePlaceholderListener(placeholderAnimationDrawable));
+
+                    placeholderAnimationDrawable.start();
+                }
+
+                DrawableCrossFadeFactory factory = new DrawableCrossFadeFactory.Builder().setCrossFadeEnabled(true).build();
+                requestBuilder.transition(withCrossFade(factory));
+            }
+
+            requestBuilder.listener(new FastImageRequestListener(key)).into(view);
         }
     }
 

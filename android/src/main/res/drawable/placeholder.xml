@@ -1,0 +1,5 @@
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:oneshot="false">
+    <item android:drawable="@color/placeholder_default" android:duration="2500" />
+    <item android:drawable="@color/placeholder_blink" android:duration="100" />
+</animation-list>

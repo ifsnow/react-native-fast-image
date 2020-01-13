@@ -25,18 +25,23 @@ function FastImageBase({
     children,
     fallback,
     forwardedRef,
+    placeholder,
     ...props
 }) {
     const containerStyle = [styles.imageContainer, style];
 
-    let resolvedSource = null;
+    let resolvedSource = { ...source };
+
+    if (placeholder) {
+        Object.assign(resolvedSource, { placeholder });
+    }
 
     if (IS_ANDROID && source instanceof Object) {
         const styleBorderRadius = (Array.isArray(style) ? StyleSheet.flatten(style) : style).borderRadius || 0;
 
         if (styleBorderRadius > 0) {
             const borderRadius = Math.round(PixelRatio.getPixelSizeForLayoutSize(styleBorderRadius));
-            resolvedSource = Object.assign({}, source, { borderRadius });
+            Object.assign(resolvedSource, { borderRadius });
         }
 
         // Android 5.0 Issue
@@ -45,10 +50,6 @@ function FastImageBase({
                 overflow: 'visible',
             });
         }
-    }
-
-    if (resolvedSource === null) {
-        resolvedSource = source;
     }
 
     if (fallback) {
@@ -133,6 +134,7 @@ FastImage.preload = sources => {
 
 FastImage.defaultProps = {
     resizeMode: FastImage.resizeMode.cover,
+    placeholder: false,
 }
 
 const FastImageView = requireNativeComponent('FastImageView', FastImage, {

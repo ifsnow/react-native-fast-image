@@ -1,4 +1,5 @@
 #import "FFFastImageView.h"
+#import "objc/runtime.h"
 
 @interface FFFastImageView()
 
@@ -13,12 +14,62 @@
 @end
 
 @implementation FFFastImageView
-
 - (id) init {
     self = [super init];
     self.resizeMode = RCTResizeModeCover;
     self.clipsToBounds = YES;
     return self;
+}
+
+- (void)setSd_imageIndicator:(id<SDWebImageIndicator>)sd_imageIndicator {
+    // Remove the old indicator view
+    id<SDWebImageIndicator> previousIndicator = self.sd_imageIndicator;
+    [previousIndicator.indicatorView removeFromSuperview];
+
+    objc_setAssociatedObject(self, @selector(sd_imageIndicator), sd_imageIndicator, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+    // Add the new indicator view
+    UIView *view = sd_imageIndicator.indicatorView;
+    if (CGRectEqualToRect(view.frame, CGRectZero)) {
+        view.frame = self.bounds;
+    }
+    // Center the indicator view
+#if SD_MAC
+    [view setFrameOrigin:CGPointMake(round((NSWidth(self.bounds) - NSWidth(view.frame)) / 2), round((NSHeight(self.bounds) - NSHeight(view.frame)) / 2))];
+#else
+    view.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
+#endif
+    view.hidden = YES;
+    view.alpha = 1;
+
+    [self addSubview:view];
+}
+
+- (void)sd_startImageIndicator {
+    id<SDWebImageIndicator> imageIndicator = self.sd_imageIndicator;
+    if (!imageIndicator) {
+        return;
+    }
+
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC);
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        dispatch_main_async_safe(^{
+            if (imageIndicator.indicatorView.alpha != 0) {
+                [imageIndicator startAnimatingIndicator];
+            }
+        });
+    });
+}
+
+- (void)sd_stopImageIndicator {
+    id<SDWebImageIndicator> imageIndicator = self.sd_imageIndicator;
+    if (!imageIndicator) {
+        return;
+    }
+    dispatch_main_async_safe(^{
+        imageIndicator.indicatorView.alpha = 0;
+        [imageIndicator stopAnimatingIndicator];
+    });
 }
 
 - (void)setResizeMode:(RCTResizeMode)resizeMode {
@@ -60,31 +111,6 @@
     }
 }
 
-- (void)setImageColor:(UIColor *)imageColor {
-    if (imageColor != nil) {
-        _imageColor = imageColor;
-        super.image = [self makeImage:super.image withTint:self.imageColor];
-    }
-}
-
-- (UIImage*)makeImage:(UIImage *)image withTint:(UIColor *)color {
-    UIImage *newImage = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-    UIGraphicsBeginImageContextWithOptions(image.size, NO, newImage.scale);
-    [color set];
-    [newImage drawInRect:CGRectMake(0, 0, image.size.width, newImage.size.height)];
-    newImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    return newImage;
-}
-
-- (void)setImage:(UIImage *)image {
-    if (self.imageColor != nil) {
-        super.image = [self makeImage:image withTint:self.imageColor];
-    } else {
-        super.image = image;
-    }
-}
-
 - (void)sendOnLoad:(UIImage *)image {
     self.onLoadEvent = @{
                          @"width":[NSNumber numberWithDouble:image.size.width],
@@ -114,38 +140,11 @@
     _needsReload = NO;
 
     if (_source) {
-
-        // Load base64 images.
-        NSString* url = [_source.url absoluteString];
-        if (url && [url hasPrefix:@"data:image"]) {
-            if (self.onFastImageLoadStart) {
-                self.onFastImageLoadStart(@{});
-                self.hasSentOnLoadStart = YES;
-            } {
-                self.hasSentOnLoadStart = NO;
-            }
-            UIImage *image = [UIImage imageWithData:[NSData dataWithContentsOfURL:_source.url]];
-            [self setImage:image];
-            if (self.onFastImageProgress) {
-                self.onFastImageProgress(@{
-                                           @"loaded": @(1),
-                                           @"total": @(1)
-                                           });
-            }
-            self.hasCompleted = YES;
-            [self sendOnLoad:image];
-            
-            if (self.onFastImageLoadEnd) {
-                self.onFastImageLoadEnd(@{});
-            }
-            return;
-        }
-        
         // Set headers.
         [_source.headers enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString* header, BOOL *stop) {
             [[SDWebImageDownloader sharedDownloader] setValue:header forHTTPHeaderField:key];
         }];
-        
+
         // Set priority.
         SDWebImageOptions options = SDWebImageRetryFailed;
         switch (_source.priority) {
@@ -159,7 +158,7 @@
                 options |= SDWebImageHighPriority;
                 break;
         }
-        
+
         switch (_source.cacheControl) {
             case FFFCacheControlWeb:
                 options |= SDWebImageRefreshCached;
@@ -170,7 +169,7 @@
             case FFFCacheControlImmutable:
                 break;
         }
-        
+
         if (self.onFastImageLoadStart) {
             self.onFastImageLoadStart(@{});
             self.hasSentOnLoadStart = YES;
@@ -179,14 +178,20 @@
         }
         self.hasCompleted = NO;
         self.hasErrored = NO;
-        
+
+        if (_source.placeholder) {
+            self.sd_imageIndicator = SDWebImageActivityIndicator.grayIndicator;
+            self.sd_imageTransition = SDWebImageTransition.fadeTransition;
+        }
+
         [self downloadImage:_source options:options];
     }
 }
 
 - (void)downloadImage:(FFFastImageSource *) source options:(SDWebImageOptions) options {
     __weak typeof(self) weakSelf = self; // Always use a weak reference to self in blocks
-    [self sd_setImageWithURL:_source.url
+
+    [self sd_setImageWithURL:source.url
             placeholderImage:nil
                      options:options
                     progress:^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
@@ -219,4 +224,3 @@
 }
 
 @end
-
