@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.AnimationDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 
 import com.bumptech.glide.Glide;
@@ -112,24 +113,32 @@ class FastImageViewManager extends SimpleViewManager<FastImageViewWithUrl> imple
 
             if (source.hasKey("placeholder") && source.getBoolean("placeholder")) {
                 AnimationDrawable placeholderAnimationDrawable = null;
+                Drawable errorPlaceholderDrawable = null;
 
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
                         placeholderAnimationDrawable = (AnimationDrawable) context.getDrawable(R.drawable.placeholder);
+                        errorPlaceholderDrawable = (Drawable) context.getDrawable(R.drawable.error);
                     else
                         placeholderAnimationDrawable = (AnimationDrawable) context.getResources().getDrawable(R.drawable.placeholder);
+                        errorPlaceholderDrawable = (Drawable) context.getResources().getDrawable(R.drawable.error);
                 } catch (Exception e) {
                 }
 
                 if (placeholderAnimationDrawable != null) {
                     requestBuilder.placeholder(placeholderAnimationDrawable);
                     requestBuilder.listener(new FastImagePlaceholderListener(placeholderAnimationDrawable));
-
+                    placeholderAnimationDrawable.setEnterFadeDuration(200);
+                    placeholderAnimationDrawable.setExitFadeDuration(200);
                     placeholderAnimationDrawable.start();
                 }
 
+                if (errorPlaceholderDrawable != null) {
+                    requestBuilder.error(R.drawable.error);
+                }
+
                 DrawableCrossFadeFactory factory = new DrawableCrossFadeFactory.Builder().setCrossFadeEnabled(true).build();
-                requestBuilder.transition(withCrossFade(factory));
+                requestBuilder.transition(withCrossFade(factory))
             }
 
             requestBuilder.listener(new FastImageRequestListener(key)).into(view);
