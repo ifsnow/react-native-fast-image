@@ -129,8 +129,8 @@ class FastImageViewManager extends SimpleViewManager<FastImageViewWithUrl> imple
                 if (placeholderAnimationDrawable != null) {
                     requestBuilder.placeholder(placeholderAnimationDrawable);
                     requestBuilder.listener(new FastImagePlaceholderListener(placeholderAnimationDrawable));
-                    placeholderAnimationDrawable.setEnterFadeDuration(200);
-                    placeholderAnimationDrawable.setExitFadeDuration(200);
+                    placeholderAnimationDrawable.setEnterFadeDuration(180);
+                    placeholderAnimationDrawable.setExitFadeDuration(180);
                     placeholderAnimationDrawable.start();
                 }
 
