@@ -146,6 +146,8 @@ function FastImageBase({
     forwardedRef,
     ...props
 }: FastImageProps & { forwardedRef: React.Ref<any> }) {
+    const containerStyle = [styles.imageContainer, style];
+
     let resolvedSource = null;
 
     if (IS_ANDROID && source instanceof Object) {
@@ -157,13 +159,18 @@ function FastImageBase({
                 resolvedSource = Object.assign({}, source, { borderRadius });
             }
         }
+
+        // Android 5.0 Issue
+        if (Platform.Version === 21) {
+            containerStyle.push({
+                overflow: 'visible',
+            });
+        }
     }
 
     if (resolvedSource === null) {
         resolvedSource = source;
     }
-
-    const containerStyle = [styles.imageContainer, style];
 
     return (
         <View style={containerStyle} ref={forwardedRef}>
