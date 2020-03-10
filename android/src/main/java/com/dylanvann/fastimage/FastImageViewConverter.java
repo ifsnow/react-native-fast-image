@@ -112,8 +112,7 @@ class FastImageViewConverter {
             .diskCacheStrategy(diskCacheStrategy)
             .onlyRetrieveFromCache(onlyFromCache)
             .skipMemoryCache(skipMemoryCache)
-            .priority(priority)
-            .placeholder(TRANSPARENT_DRAWABLE);
+            .priority(priority);
 
         if (source.hasKey("borderRadius")) {
             int borderRadius = source.getInt("borderRadius");

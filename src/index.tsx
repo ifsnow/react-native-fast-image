@@ -81,7 +81,7 @@ export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
 }
 
 export interface FastImageProps extends AccessibilityProps {
-    source: Source | number
+    source: Source
     resizeMode?: ResizeMode
     fallback?: boolean
 
@@ -126,7 +126,9 @@ export interface FastImageProps extends AccessibilityProps {
     /**
      * Render children within the image.
      */
-    children?: React.ReactNode
+    children?: React.ReactNode,
+
+    placeholder?: boolean,
 }
 
 const IS_ANDROID = Platform.OS === 'android';
@@ -144,19 +146,24 @@ function FastImageBase({
     // eslint-disable-next-line no-shadow
     resizeMode = 'cover',
     forwardedRef,
+    placeholder = false,
     ...props
 }: FastImageProps & { forwardedRef: React.Ref<any> }) {
     const containerStyle = [styles.imageContainer, style];
 
-    let resolvedSource = null;
+    let resolvedSource = { ...source };
 
-    if (IS_ANDROID && source instanceof Object) {
+    if (placeholder) {
+        Object.assign(resolvedSource, { placeholder });
+    }
+
+    if (IS_ANDROID) {
         const mergedStyle = StyleSheet.flatten(style);
         if (mergedStyle) {
             const styleBorderRadius = mergedStyle.borderRadius || 0;        
             if (styleBorderRadius > 0) {
                 const borderRadius = Math.round(PixelRatio.getPixelSizeForLayoutSize(styleBorderRadius));
-                resolvedSource = Object.assign({}, source, { borderRadius });
+                Object.assign(resolvedSource, { borderRadius });
             }
         }
 
@@ -166,10 +173,6 @@ function FastImageBase({
                 overflow: 'visible',
             });
         }
-    }
-
-    if (resolvedSource === null) {
-        resolvedSource = source;
     }
 
     return (
