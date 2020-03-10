@@ -1,7 +1,6 @@
 import React, { forwardRef, memo } from 'react'
 import {
     View,
-    Image,
     NativeModules,
     requireNativeComponent,
     StyleSheet,
@@ -11,6 +10,8 @@ import {
     StyleProp,
     TransformsStyle,
     AccessibilityProps,
+    Platform,
+    PixelRatio,
 } from 'react-native'
 
 const FastImageViewNativeModule = NativeModules.FastImageView
@@ -107,7 +108,7 @@ export interface FastImageProps extends AccessibilityProps {
      *
      * Style
      */
-    style?: StyleProp<ImageStyle>
+    style: StyleProp<ImageStyle>
 
     /**
      * TintColor
@@ -128,6 +129,8 @@ export interface FastImageProps extends AccessibilityProps {
     children?: React.ReactNode
 }
 
+const IS_ANDROID = Platform.OS === 'android';
+
 function FastImageBase({
     source,
     tintColor,
@@ -137,40 +140,33 @@ function FastImageBase({
     onError,
     onLoadEnd,
     style,
-    fallback,
     children,
     // eslint-disable-next-line no-shadow
     resizeMode = 'cover',
     forwardedRef,
     ...props
 }: FastImageProps & { forwardedRef: React.Ref<any> }) {
-    if (fallback) {
-        const cleanedSource = { ...(source as any) }
-        delete cleanedSource.cache
-        const resolvedSource = Image.resolveAssetSource(cleanedSource)
+    let resolvedSource = null;
 
-        return (
-            <View style={[styles.imageContainer, style]} ref={forwardedRef}>
-                <Image
-                    {...props}
-                    style={StyleSheet.absoluteFill}
-                    source={resolvedSource}
-                    onLoadStart={onLoadStart}
-                    onProgress={onProgress}
-                    onLoad={onLoad as any}
-                    onError={onError}
-                    onLoadEnd={onLoadEnd}
-                    resizeMode={resizeMode}
-                />
-                {children}
-            </View>
-        )
+    if (IS_ANDROID && source instanceof Object) {
+        const mergedStyle = StyleSheet.flatten(style);
+        if (mergedStyle) {
+            const styleBorderRadius = mergedStyle.borderRadius || 0;        
+            if (styleBorderRadius > 0) {
+                const borderRadius = Math.round(PixelRatio.getPixelSizeForLayoutSize(styleBorderRadius));
+                resolvedSource = Object.assign({}, source, { borderRadius });
+            }
+        }
     }
 
-    const resolvedSource = Image.resolveAssetSource(source as any)
+    if (resolvedSource === null) {
+        resolvedSource = source;
+    }
+
+    const containerStyle = [styles.imageContainer, style];
 
     return (
-        <View style={[styles.imageContainer, style]} ref={forwardedRef}>
+        <View style={containerStyle} ref={forwardedRef}>
             <FastImageView
                 {...props}
                 tintColor={tintColor}
