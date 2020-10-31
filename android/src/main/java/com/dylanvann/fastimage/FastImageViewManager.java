@@ -13,7 +13,9 @@ import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.RequestManager;
 import com.bumptech.glide.load.model.GlideUrl;
 import com.bumptech.glide.request.transition.DrawableCrossFadeFactory;
+import com.bumptech.glide.integration.webp.decoder.WebpDrawable;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.common.MapBuilder;
@@ -42,6 +44,8 @@ class FastImageViewManager extends SimpleViewManager<FastImageViewWithUrl> imple
     private static final String REACT_ON_PROGRESS_EVENT = "onFastImageProgress";
     private static final Map<String, List<FastImageViewWithUrl>> VIEWS_FOR_URLS = new WeakHashMap<>();
 
+    public static final int COMMAND_PLAY_ANIMATION = 1;
+
     @Nullable
     private RequestManager requestManager = null;
 
@@ -57,6 +61,30 @@ class FastImageViewManager extends SimpleViewManager<FastImageViewWithUrl> imple
         }
 
         return new FastImageViewWithUrl(reactContext);
+    }
+
+
+  @Override
+  @Nullable
+  public Map<String, Integer> getCommandsMap() {
+    return MapBuilder.<String, Integer>builder()
+      .put("playAnimation", COMMAND_PLAY_ANIMATION)
+      .build();
+  }
+
+    @Override
+    public void receiveCommand(FastImageViewWithUrl view, int commandId, @Nullable ReadableArray args) {
+        switch (commandId) {
+            case COMMAND_PLAY_ANIMATION:
+                WebpDrawable drawable = view.getWebpDrawable();
+                if (drawable != null && !drawable.isRunning()) {
+                    try {
+                        drawable.startFromFirstFrame();
+                    } catch (IllegalArgumentException ignoreException) {
+                    }
+                }
+                break;
+        }
     }
 
     @ReactProp(name = "source")
@@ -153,6 +181,11 @@ class FastImageViewManager extends SimpleViewManager<FastImageViewWithUrl> imple
         } else {
             view.setColorFilter(color, PorterDuff.Mode.SRC_IN);
         }
+    }
+
+    @ReactProp(name = "loopCount")
+    public void setLoopCount(FastImageViewWithUrl view, int loopCount) {
+        view.setLoopCount(loopCount);
     }
 
     @ReactProp(name = "resizeMode")

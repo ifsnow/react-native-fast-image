@@ -62,6 +62,7 @@ export type FastImageProps = $ReadOnly<{|
     fallback?: ?boolean,
     testID?: ?string,
     placeholder?: boolean,
+    loopCount?: number,
 |}>
 
 declare export default class FastImage extends React$Component<FastImageProps> {
@@ -69,4 +70,5 @@ declare export default class FastImage extends React$Component<FastImageProps> {
     static priority: Priority;
     static cacheControl: CacheControl;
     static preload: PreloadFn;
+    static playAnimation: (ref: React$ElementRef<any>) => void;
 }

@@ -3,6 +3,9 @@
 
 #import <SDWebImage/SDWebImagePrefetcher.h>
 
+#import <React/RCTUIManager.h>
+#import <React/RCTViewManager.h>
+
 @implementation FFFastImageViewManager
 
 RCT_EXPORT_MODULE(FastImageView)
@@ -18,6 +21,7 @@ RCT_EXPORT_VIEW_PROPERTY(onFastImageProgress, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onFastImageError, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onFastImageLoad, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onFastImageLoadEnd, RCTDirectEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(loopCount, NSInteger)
 RCT_REMAP_VIEW_PROPERTY(tintColor, imageColor, UIColor)
 
 RCT_EXPORT_METHOD(preload:(nonnull NSArray<FFFastImageSource *> *)sources)
@@ -34,5 +38,18 @@ RCT_EXPORT_METHOD(preload:(nonnull NSArray<FFFastImageSource *> *)sources)
     [[SDWebImagePrefetcher sharedImagePrefetcher] prefetchURLs:urls];
 }
 
+RCT_EXPORT_METHOD(playAnimation:(nonnull NSNumber*) reactTag)
+{
+    [self.bridge.uiManager addUIBlock:^(RCTUIManager *uiManager, NSDictionary<NSNumber *,UIView *> *viewRegistry) {
+        UIView *view = viewRegistry[reactTag];
+        if (!view || ![view isKindOfClass:[FFFastImageView class]]) {
+            RCTLogError(@"Cannot find FFFastImageView with tag #%@", reactTag);
+            return;
+        }
+        FFFastImageView *fastImageView = (FFFastImageView *)view;
+        if (!fastImageView.isAnimating) {
+            [fastImageView startAnimating];
+        }
+    }];
+}
 @end
-

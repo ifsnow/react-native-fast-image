@@ -2,6 +2,7 @@ package com.dylanvann.fastimage;
 
 import android.graphics.drawable.Drawable;
 
+import com.bumptech.glide.integration.webp.decoder.WebpDrawable;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
@@ -56,6 +57,14 @@ public class FastImageRequestListener implements RequestListener<Drawable> {
         int viewId = view.getId();
         eventEmitter.receiveEvent(viewId, REACT_ON_LOAD_EVENT, mapFromResource(resource));
         eventEmitter.receiveEvent(viewId, REACT_ON_LOAD_END_EVENT, new WritableNativeMap());
+
+        if (resource instanceof WebpDrawable) {
+            WebpDrawable drawable = ((WebpDrawable) resource);
+            view.setWebpDrawable(drawable);
+        } else {
+            view.setWebpDrawable(null);
+        }
+
         return false;
     }
 }

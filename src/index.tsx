@@ -12,6 +12,9 @@ import {
     AccessibilityProps,
     Platform,
     PixelRatio,
+    UIManager,
+    findNodeHandle,
+    Image,
 } from 'react-native'
 
 const FastImageViewNativeModule = NativeModules.FastImageView
@@ -81,7 +84,7 @@ export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
 }
 
 export interface FastImageProps extends AccessibilityProps {
-    source: Source
+    source: Source | number
     resizeMode?: ResizeMode
     fallback?: boolean
 
@@ -129,6 +132,8 @@ export interface FastImageProps extends AccessibilityProps {
     children?: React.ReactNode,
 
     placeholder?: boolean,
+
+    loopCount?: number,
 }
 
 const IS_ANDROID = Platform.OS === 'android';
@@ -147,37 +152,45 @@ function FastImageBase({
     resizeMode = 'cover',
     forwardedRef,
     placeholder = false,
+    loopCount = -1,
     ...props
 }: FastImageProps & { forwardedRef: React.Ref<any> }) {
     const containerStyle = [styles.imageContainer, style];
 
-    let resolvedSource = { ...source };
+    let resolvedSource;
 
-    if (placeholder) {
-        Object.assign(resolvedSource, { placeholder });
-    }
+    if (source instanceof Object) {
+        resolvedSource = {...source};
 
-    if (IS_ANDROID) {
-        const mergedStyle = StyleSheet.flatten(style);
-        if (mergedStyle) {
-            const styleBorderRadius = mergedStyle.borderRadius || 0;        
-            if (styleBorderRadius > 0) {
-                const borderRadius = Math.round(PixelRatio.getPixelSizeForLayoutSize(styleBorderRadius));
-                Object.assign(resolvedSource, { borderRadius });
+        if (placeholder) {
+            Object.assign(resolvedSource, { placeholder });
+        }
+
+        if (IS_ANDROID) {
+            const mergedStyle = StyleSheet.flatten(style);
+            if (mergedStyle) {
+                const styleBorderRadius = mergedStyle.borderRadius || 0;
+                if (styleBorderRadius > 0) {
+                    const borderRadius = Math.round(PixelRatio.getPixelSizeForLayoutSize(styleBorderRadius));
+                    Object.assign(resolvedSource, { borderRadius });
+                }
+            }
+
+            // Android 5.0 Issue
+            if (Platform.Version === 21) {
+                containerStyle.push({
+                    overflow: 'visible',
+                });
             }
         }
-
-        // Android 5.0 Issue
-        if (Platform.Version === 21) {
-            containerStyle.push({
-                overflow: 'visible',
-            });
-        }
+    } else {
+        resolvedSource = Image.resolveAssetSource(source as any);
     }
 
     return (
-        <View style={containerStyle} ref={forwardedRef}>
+        <View style={containerStyle}>
             <FastImageView
+                ref={forwardedRef}
                 {...props}
                 tintColor={tintColor}
                 style={StyleSheet.absoluteFill}
@@ -188,6 +201,7 @@ function FastImageBase({
                 onFastImageError={onError}
                 onFastImageLoadEnd={onLoadEnd}
                 resizeMode={resizeMode}
+                loopCount={loopCount}
             />
             {children}
         </View>
@@ -209,6 +223,7 @@ interface FastImageStaticProperties {
     priority: typeof priority
     cacheControl: typeof cacheControl
     preload: (sources: Source[]) => void
+    playAnimation: (ref: React.RefObject<any>) => void
 }
 
 const FastImage: React.ComponentType<FastImageProps> &
@@ -223,6 +238,18 @@ FastImage.priority = priority
 FastImage.preload = (sources: Source[]) =>
     FastImageViewNativeModule.preload(sources)
 
+FastImage.playAnimation = (ref: React.RefObject<any>) => {
+    if (!ref.current) {
+        return;
+    }
+    
+    UIManager.dispatchViewManagerCommand(
+        findNodeHandle(ref.current as any),
+        UIManager.getViewManagerConfig('FastImageView').Commands.playAnimation,
+        []
+    );
+}
+    
 const styles = StyleSheet.create({
     imageContainer: {
         overflow: 'hidden',

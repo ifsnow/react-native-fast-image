@@ -129,6 +129,13 @@
     }
 }
 
+- (void)setLoopCount:(long)loopCount {
+    if (loopCount > -1) {
+        self.shouldCustomLoopCount = YES;
+        self.animationRepeatCount = loopCount;
+    }
+}
+
 - (void)didSetProps:(NSArray<NSString *> *)changedProps
 {
     if (_needsReload) {
@@ -217,12 +224,12 @@
                                   NSURL * _Nullable imageURL) {
                         if (error) {
                             weakSelf.hasErrored = YES;
-                                if (weakSelf.onFastImageError) {
-                                    weakSelf.onFastImageError(@{});
-                                }
-                                if (weakSelf.onFastImageLoadEnd) {
-                                    weakSelf.onFastImageLoadEnd(@{});
-                                }
+                            if (weakSelf.onFastImageError) {
+                                weakSelf.onFastImageError(@{});
+                            }
+                            if (weakSelf.onFastImageLoadEnd) {
+                                weakSelf.onFastImageLoadEnd(@{});
+                            }
                         } else {
                             weakSelf.hasCompleted = YES;
                             [weakSelf sendOnLoad:image];
